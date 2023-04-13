@@ -1,26 +1,50 @@
 import { useQuery } from '@tanstack/react-query'
-import React from 'react'
 import weatherApi from '~/apis/weather.api'
-import { BsSnow3 } from 'react-icons/bs'
 import { RiWindyLine } from 'react-icons/ri'
-import { MdOutlineWbSunny } from 'react-icons/md'
-
-import { useQueryString } from '~/utils/utils'
+import { WiHumidity } from 'react-icons/wi'
+import { convertDatetoDay, useQueryParams } from '~/utils/utils'
+import { useForm } from 'react-hook-form'
+import { createSearchParams, useNavigate } from 'react-router-dom'
+import classNames from 'classnames'
 
 export default function Homepage() {
-  const queryString: { q?: string } = useQueryString()
-
+  const queryParams: { q?: string } = useQueryParams()
+  const navigate = useNavigate()
   const query = useQuery({
-    queryKey: ['weather', queryString],
+    queryKey: ['weather', queryParams],
     queryFn: () => {
-      return weatherApi.getWeatherWithState(queryString)
-    }
+      return weatherApi.getWeatherWithState(queryParams)
+    },
+    enabled: !(Object.keys(queryParams).length === 0),
+    keepPreviousData: true
   })
-  console.log(query)
+  const { handleSubmit, register } = useForm()
+  console.log('q ', queryParams)
+  const onSubmit = handleSubmit((data) => {
+    navigate({
+      pathname: '/',
+      search: createSearchParams({
+        q: data.name
+      }).toString()
+    })
+  })
+  console.log('thien cao', query.data)
 
   return (
     <div className=' bg-orange-50 w-screen h-screen relative'>
-      <div className=' m-auto absolute top-20 right-20 bottom-20 left-20 rounded-[3rem] px-20 py-10 shadow-sm bg-center bg-no-repeat bg-[url("https://cdn.wallpapersafari.com/43/51/iQEfDy.jpg")] bg-gray-700 bg-blend-multiply object-cover'>
+      <div
+        className={classNames(
+          'm-auto absolute top-20 right-20 bottom-20 left-20 rounded-[3rem] px-20 py-10 shadow-sm bg-center bg-no-repeat bg-blend-multiply object-cover',
+          {
+            'bg-[url("https://img.freepik.com/free-photo/beautiful-blue-sky-with-white-clouds_1017-21760.jpg?w=1800&t=st=1681407575~exp=1681408175~hmac=0c48d6188c1cbecfdb192f758b586a8ff5c3f1366cf816502b9c9d7674500f10")]':
+              query.data?.data.current.condition.text.toLowerCase().includes('clear' || 'cloudy'),
+            'bg-[url("https://img.freepik.com/free-photo/cloud-blue-sky_1232-3108.jpg?w=1380&t=st=1681408435~exp=1681409035~hmac=ee0dfe388f64cdcc296731e0eea1ccdd9260bc5bc2db47d56d265bad453c4ef5")]':
+              query.data?.data.current.condition.text.toLowerCase().includes('sunny'),
+            'bg-[url("https://img.freepik.com/free-photo/rain-outside-windows-villa_1321-908.jpg?w=1380&t=st=1681408755~exp=1681409355~hmac=65c71f9ea8bf809eae04ccd14a2eb6e4c8dafc622c85f6a1e8e1178476b63285")]':
+              query.data?.data.current.condition.text.toLowerCase().includes('rain')
+          }
+        )}
+      >
         {/* header */}
         <div className='flex justify-between items-center container'>
           <div className='flex items-center'>
@@ -277,7 +301,7 @@ export default function Homepage() {
             <span className='font-bold text-xl'>Thien Cao</span>
           </div>
           <div>
-            <form>
+            <form onSubmit={onSubmit}>
               <label
                 htmlFor='default-search'
                 className='mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white'
@@ -290,7 +314,7 @@ export default function Homepage() {
                   id='default-search'
                   className=' w-full p-3 pl-10 text-sm outline-none  text-gray-900 border border-gray-300 rounded-3xl  focus:ring-gray-500 focus:border-gray-500'
                   placeholder='Search '
-                  required
+                  {...register('name')}
                 />
                 <button
                   type='submit'
@@ -320,11 +344,13 @@ export default function Homepage() {
         <div className='container relative px-40'>
           <div className='text-white flex justify-evenly items-center '>
             <div className='flex flex-col'>
-              <div className='font-medium text-[13rem]'>18C</div>
+              <div className='font-medium text-[13rem]'>
+                {Math.round(query.data?.data.current.temp_c || 0)}°<span className='text-[10rem]'>C</span>
+              </div>
               <div className='flex justify-around w-full'>
                 <div className='flex items-center'>
                   <div className='fi fi-gr'></div>
-                  <div className='ml-2 font-medium text-xl'>Finland</div>
+                  <div className='ml-2 font-medium text-xl'>{query.data?.data.location.name}</div>
                 </div>
                 <div className='flex items-center'>
                   <svg
@@ -373,1071 +399,182 @@ export default function Homepage() {
                       </g>
                     </g>
                   </svg>
-                  <div className='ml-2 font-medium text-xl'>Cloud</div>
+                  <div className='ml-2 font-medium text-xl'>{query.data?.data.current.condition.text}</div>
                 </div>
               </div>
             </div>
             <div className='flex flex-col mt-[-3rem]'>
               <div className='flex mt-2 items-center'>
-                <BsSnow3 />
-                <span className='ml-3 font-medium text-lg'>26%</span>
+                <WiHumidity />
+                <span className='ml-3 font-medium text-lg'>{query.data?.data.current.humidity}%</span>
               </div>
               <div className='flex mt-2 items-center'>
                 <RiWindyLine />
-                <span className='ml-3 font-medium text-lg'>16 km/h</span>
+                <span className='ml-3 font-medium text-lg'>{query.data?.data.current.wind_kph} km/h</span>
               </div>
               <div className='flex mt-2 items-center'>
-                <MdOutlineWbSunny />
-                <span className='ml-3 font-medium text-lg'>6.5 h</span>
+                {/* <MdOutlineWbSunny /> */}
+                <span className='text-sm font-medium'>UV</span>
+                <span className='ml-3 font-medium text-lg'>{query.data?.data.current.uv}</span>
               </div>
             </div>
           </div>
         </div>
         {/* panel */}
         <div className='w-full bg-[rgba(0,0,0,0.3)] flex p-6 justify-around rounded-3xl mt-2'>
-          <div className='flex flex-col items-center'>
-            <span className='text-white capitalize font-bold'>Mon</span>
-            <svg
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-              width={64}
-              height={64}
-              viewBox='0 0 64 64'
-            >
-              <defs>
-                <filter id='blur' width='200%' height='200%'>
-                  <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
-                  <feOffset dx={0} dy={4} result='offsetblur' />
-                  <feComponentTransfer>
-                    <feFuncA type='linear' slope='0.05' />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in='SourceGraphic' />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter='url(#blur)' id='cloudy-day-1'>
-                <g transform='translate(20,10)'>
-                  <g transform='translate(0,16)'>
-                    <g className='am-weather-sun'>
-                      <g>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
+          {query.data?.data.forecast.forecastday.map((item) => {
+            return (
+              <div key={item.date} className='flex flex-col items-center'>
+                <span className='text-white capitalize font-bold'>{convertDatetoDay(item.date)}</span>
+                <svg
+                  version='1.1'
+                  xmlns='http://www.w3.org/2000/svg'
+                  xmlnsXlink='http://www.w3.org/1999/xlink'
+                  width={64}
+                  height={64}
+                  viewBox='0 0 64 64'
+                >
+                  <defs>
+                    <filter id='blur' width='200%' height='200%'>
+                      <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
+                      <feOffset dx={0} dy={4} result='offsetblur' />
+                      <feComponentTransfer>
+                        <feFuncA type='linear' slope='0.05' />
+                      </feComponentTransfer>
+                      <feMerge>
+                        <feMergeNode />
+                        <feMergeNode in='SourceGraphic' />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <g filter='url(#blur)' id='cloudy-day-1'>
+                    <g transform='translate(20,10)'>
+                      <g transform='translate(0,16)'>
+                        <g className='am-weather-sun'>
+                          <g>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                          <g transform='rotate(45)'>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                          <g transform='rotate(90)'>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                          <g transform='rotate(135)'>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                          <g transform='rotate(180)'>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                          <g transform='rotate(225)'>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                          <g transform='rotate(270)'>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                          <g transform='rotate(315)'>
+                            <line
+                              fill='none'
+                              stroke='orange'
+                              strokeLinecap='round'
+                              strokeWidth={2}
+                              transform='translate(0,9)'
+                              x1={0}
+                              x2={0}
+                              y1={0}
+                              y2={3}
+                            />
+                          </g>
+                        </g>
+                        <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
                       </g>
-                      <g transform='rotate(45)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(90)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(135)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(180)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(225)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(270)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(315)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                    </g>
-                    <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
-                  </g>
-                  <g className='am-weather-cloud-2'>
-                    <path
-                      d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
-                      fill='#C6DEFF'
-                      stroke='white'
-                      strokeLinejoin='round'
-                      strokeWidth='1.2'
-                      transform='translate(-20,-11)'
-                    />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className='text-white font-thin'>Patchy rain possible</div>
-          </div>
-          <div className='flex flex-col items-center'>
-            <span className='text-white capitalize font-bold'>Tue</span>
-            <svg
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-              width={64}
-              height={64}
-              viewBox='0 0 64 64'
-            >
-              <defs>
-                <filter id='blur' width='200%' height='200%'>
-                  <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
-                  <feOffset dx={0} dy={4} result='offsetblur' />
-                  <feComponentTransfer>
-                    <feFuncA type='linear' slope='0.05' />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in='SourceGraphic' />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter='url(#blur)' id='cloudy-day-1'>
-                <g transform='translate(20,10)'>
-                  <g transform='translate(0,16)'>
-                    <g className='am-weather-sun'>
-                      <g>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(45)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(90)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(135)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(180)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(225)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(270)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(315)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
+                      <g className='am-weather-cloud-2'>
+                        <path
+                          d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
+                          fill='#C6DEFF'
+                          stroke='white'
+                          strokeLinejoin='round'
+                          strokeWidth='1.2'
+                          transform='translate(-20,-11)'
                         />
                       </g>
                     </g>
-                    <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
                   </g>
-                  <g className='am-weather-cloud-2'>
-                    <path
-                      d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
-                      fill='#C6DEFF'
-                      stroke='white'
-                      strokeLinejoin='round'
-                      strokeWidth='1.2'
-                      transform='translate(-20,-11)'
-                    />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className='text-white font-thin'>Patchy rain possible</div>
-          </div>
-          <div className='flex flex-col items-center'>
-            <span className='text-white capitalize font-bold'>Wed</span>
-            <svg
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-              width={64}
-              height={64}
-              viewBox='0 0 64 64'
-            >
-              <defs>
-                <filter id='blur' width='200%' height='200%'>
-                  <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
-                  <feOffset dx={0} dy={4} result='offsetblur' />
-                  <feComponentTransfer>
-                    <feFuncA type='linear' slope='0.05' />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in='SourceGraphic' />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter='url(#blur)' id='cloudy-day-1'>
-                <g transform='translate(20,10)'>
-                  <g transform='translate(0,16)'>
-                    <g className='am-weather-sun'>
-                      <g>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(45)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(90)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(135)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(180)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(225)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(270)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(315)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                    </g>
-                    <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
-                  </g>
-                  <g className='am-weather-cloud-2'>
-                    <path
-                      d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
-                      fill='#C6DEFF'
-                      stroke='white'
-                      strokeLinejoin='round'
-                      strokeWidth='1.2'
-                      transform='translate(-20,-11)'
-                    />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className='text-white font-thin'>Patchy rain possible</div>
-          </div>
-          <div className='flex flex-col items-center'>
-            <span className='text-white capitalize font-bold'>Thu</span>
-            <svg
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-              width={64}
-              height={64}
-              viewBox='0 0 64 64'
-            >
-              <defs>
-                <filter id='blur' width='200%' height='200%'>
-                  <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
-                  <feOffset dx={0} dy={4} result='offsetblur' />
-                  <feComponentTransfer>
-                    <feFuncA type='linear' slope='0.05' />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in='SourceGraphic' />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter='url(#blur)' id='cloudy-day-1'>
-                <g transform='translate(20,10)'>
-                  <g transform='translate(0,16)'>
-                    <g className='am-weather-sun'>
-                      <g>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(45)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(90)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(135)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(180)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(225)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(270)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(315)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                    </g>
-                    <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
-                  </g>
-                  <g className='am-weather-cloud-2'>
-                    <path
-                      d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
-                      fill='#C6DEFF'
-                      stroke='white'
-                      strokeLinejoin='round'
-                      strokeWidth='1.2'
-                      transform='translate(-20,-11)'
-                    />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className='text-white font-thin'>Patchy rain possible</div>
-          </div>
-          <div className='flex flex-col items-center'>
-            <span className='text-white capitalize font-bold'>Fri</span>
-            <svg
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-              width={64}
-              height={64}
-              viewBox='0 0 64 64'
-            >
-              <defs>
-                <filter id='blur' width='200%' height='200%'>
-                  <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
-                  <feOffset dx={0} dy={4} result='offsetblur' />
-                  <feComponentTransfer>
-                    <feFuncA type='linear' slope='0.05' />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in='SourceGraphic' />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter='url(#blur)' id='cloudy-day-1'>
-                <g transform='translate(20,10)'>
-                  <g transform='translate(0,16)'>
-                    <g className='am-weather-sun'>
-                      <g>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(45)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(90)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(135)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(180)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(225)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(270)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(315)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                    </g>
-                    <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
-                  </g>
-                  <g className='am-weather-cloud-2'>
-                    <path
-                      d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
-                      fill='#C6DEFF'
-                      stroke='white'
-                      strokeLinejoin='round'
-                      strokeWidth='1.2'
-                      transform='translate(-20,-11)'
-                    />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className='text-white font-thin'>Patchy rain possible</div>
-          </div>
-          <div className='flex flex-col items-center'>
-            <span className='text-white capitalize font-bold'>Sat</span>
-            <svg
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-              width={64}
-              height={64}
-              viewBox='0 0 64 64'
-            >
-              <defs>
-                <filter id='blur' width='200%' height='200%'>
-                  <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
-                  <feOffset dx={0} dy={4} result='offsetblur' />
-                  <feComponentTransfer>
-                    <feFuncA type='linear' slope='0.05' />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in='SourceGraphic' />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter='url(#blur)' id='cloudy-day-1'>
-                <g transform='translate(20,10)'>
-                  <g transform='translate(0,16)'>
-                    <g className='am-weather-sun'>
-                      <g>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(45)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(90)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(135)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(180)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(225)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(270)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(315)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                    </g>
-                    <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
-                  </g>
-                  <g className='am-weather-cloud-2'>
-                    <path
-                      d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
-                      fill='#C6DEFF'
-                      stroke='white'
-                      strokeLinejoin='round'
-                      strokeWidth='1.2'
-                      transform='translate(-20,-11)'
-                    />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className='text-white font-thin'>Patchy rain possible</div>
-          </div>
-          <div className='flex flex-col items-center'>
-            <span className='text-white capitalize font-bold'>Sun</span>
-            <svg
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              xmlnsXlink='http://www.w3.org/1999/xlink'
-              width={64}
-              height={64}
-              viewBox='0 0 64 64'
-            >
-              <defs>
-                <filter id='blur' width='200%' height='200%'>
-                  <feGaussianBlur in='SourceAlpha' stdDeviation={3} />
-                  <feOffset dx={0} dy={4} result='offsetblur' />
-                  <feComponentTransfer>
-                    <feFuncA type='linear' slope='0.05' />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in='SourceGraphic' />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter='url(#blur)' id='cloudy-day-1'>
-                <g transform='translate(20,10)'>
-                  <g transform='translate(0,16)'>
-                    <g className='am-weather-sun'>
-                      <g>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(45)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(90)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(135)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(180)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(225)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(270)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                      <g transform='rotate(315)'>
-                        <line
-                          fill='none'
-                          stroke='orange'
-                          strokeLinecap='round'
-                          strokeWidth={2}
-                          transform='translate(0,9)'
-                          x1={0}
-                          x2={0}
-                          y1={0}
-                          y2={3}
-                        />
-                      </g>
-                    </g>
-                    <circle cx={0} cy={0} fill='orange' r={5} stroke='orange' strokeWidth={2} />
-                  </g>
-                  <g className='am-weather-cloud-2'>
-                    <path
-                      d='M47.7,35.4c0-4.6-3.7-8.2-8.2-8.2c-1,0-1.9,0.2-2.8,0.5c-0.3-3.4-3.1-6.2-6.6-6.2c-3.7,0-6.7,3-6.7,6.7c0,0.8,0.2,1.6,0.4,2.3    c-0.3-0.1-0.7-0.1-1-0.1c-3.7,0-6.7,3-6.7,6.7c0,3.6,2.9,6.6,6.5,6.7l17.2,0C44.2,43.3,47.7,39.8,47.7,35.4z'
-                      fill='#C6DEFF'
-                      stroke='white'
-                      strokeLinejoin='round'
-                      strokeWidth='1.2'
-                      transform='translate(-20,-11)'
-                    />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className='text-white font-thin'>Patchy rain possible</div>
-          </div>
+                </svg>
+                <div className='text-white font-thin'>{item.day.condition.text}</div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

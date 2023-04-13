@@ -3,9 +3,13 @@ class Http {
   instance: AxiosInstance
   constructor() {
     this.instance = axios.create({
-      baseURL: `https://api.weatherapi.com/v1/current.json?key=a51ee50b8a314e7093c155823231104`,
+      baseURL: `http://api.weatherapi.com`,
       headers: {
         'Content-Type': 'application/json'
+      },
+      params: {
+        key: 'a51ee50b8a314e7093c155823231104',
+        days: 7
       }
     })
   }
