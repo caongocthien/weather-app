@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import weatherApi from '~/apis/weather.api'
-import { convertDatetoDay, getCountryCodeIso2, getLocation, useQueryParams } from '~/utils/utils'
+import { convertDatetoDay, getCountryCodeIso2, getLocation, getSessionInDayByUrl, useQueryParams } from '~/utils/utils'
 import { useForm } from 'react-hook-form'
 import { Link, createSearchParams, useNavigate } from 'react-router-dom'
-import classNames from 'classnames'
 import { useEffect, useState } from 'react'
 import Skeleton from '~/components/Skeleton'
+import weatherBackground from '~/constants/weather.constant'
 
 export default function Homepage() {
   const [location, setLocation] = useState({ latitude: '', longitude: '' })
+  const [temp, setTemp] = useState(true)
   const queryParams: { q?: string } = useQueryParams()
   const configParam = {
     q: queryParams.q || `${location.latitude},${location.longitude}`
@@ -42,24 +43,21 @@ export default function Homepage() {
         // handle the error here
       })
   }, [])
-  console.log(query.isLoading)
+
+  const backgroundImage = () => {
+    const result: any = weatherBackground.filter((item) => item.name === query.data?.data.current.condition.text)
+    const session: string = getSessionInDayByUrl(query.data?.data.current.condition.icon as string)
+    console.log('session', session)
+    return result.length > 0 && result[0][session]
+  }
 
   return (
     <div className=' bg-orange-50 w-screen h-screen relative'>
       <div
-        className={classNames(
-          'm-auto absolute top-20 right-20 bottom-20 left-20 rounded-[3rem] px-20 py-10 shadow-sm bg-center bg-no-repeat bg-blend-multiply object-cover',
-          {
-            'bg-[url("https://img.freepik.com/free-photo/beautiful-blue-sky-with-white-clouds_1017-21760.jpg?w=1800&t=st=1681407575~exp=1681408175~hmac=0c48d6188c1cbecfdb192f758b586a8ff5c3f1366cf816502b9c9d7674500f10")]':
-              query.data?.data.current.condition.text.toLowerCase().includes('cloudy'),
-            'bg-[url("https://img.freepik.com/free-photo/cloud-blue-sky_1232-3108.jpg?w=1380&t=st=1681408435~exp=1681409035~hmac=ee0dfe388f64cdcc296731e0eea1ccdd9260bc5bc2db47d56d265bad453c4ef5")]':
-              query.data?.data.current.condition.text.toLowerCase().includes('sunny'),
-            'bg-[url("https://img.freepik.com/free-photo/rain-outside-windows-villa_1321-908.jpg?w=1380&t=st=1681408755~exp=1681409355~hmac=65c71f9ea8bf809eae04ccd14a2eb6e4c8dafc622c85f6a1e8e1178476b63285")]':
-              query.data?.data.current.condition.text.toLowerCase().includes('rain'),
-            'bg-[url("https://images.unsplash.com/photo-1499956827185-0d63ee78a910?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470&q=80")]':
-              query.data?.data.current.condition.text.toLowerCase().includes('overcast')
-          }
-        )}
+        style={{
+          backgroundImage: `url(${backgroundImage()})`
+        }}
+        className={`m-auto absolute top-20 right-20 bottom-20 left-20 rounded-[3rem] px-20 py-10 shadow-sm bg-center bg-no-repeat bg-blend-multiply object-cover`}
       >
         {/* header */}
         <div className='flex justify-between items-center container'>
@@ -316,25 +314,24 @@ export default function Homepage() {
             </svg>
             <span className='font-bold text-xl text-white'>Thien Weather</span>
           </Link>
-          <div>
+          <div className='flex'>
+            <button
+              onClick={() => setTemp(!temp)}
+              className='bg-transparent font-bold text-white outline-none border-none focus:outline-none hover:border-none'
+            >
+              {temp ? 'Fahrenheit' : 'Celsius'}
+            </button>
             <form onSubmit={onSubmit}>
-              <label
-                htmlFor='default-search'
-                className='mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white'
-              >
-                Search
-              </label>
               <div className='relative'>
                 <input
-                  type='search'
-                  id='default-search'
-                  className=' w-full p-3 pl-10 text-sm outline-none  text-gray-900 border border-gray-300 rounded-3xl  focus:ring-gray-500 focus:border-gray-500'
+                  type='text'
+                  className=' w-full p-3 pl-10 text-sm outline-none  text-gray-900 border rounded-3xl   '
                   placeholder='Search '
                   {...register('name')}
                 />
                 <button
                   type='submit'
-                  className='text-white border-none outline-none absolute right-2 bottom-2 font-medium text-xs'
+                  className='text-white border-none outline-none focus:outline-none absolute right-2 bottom-2 font-medium text-xs'
                 >
                   <svg
                     aria-hidden='true'
@@ -364,7 +361,8 @@ export default function Homepage() {
               <div className='text-white flex justify-evenly items-center '>
                 <div className='flex flex-col'>
                   <div className='font-medium text-[13rem] leading-[13rem]'>
-                    {Math.round(query.data?.data.current.temp_c as number)}°<span className='text-[10rem]'>C</span>
+                    {Math.round((temp ? query.data?.data.current.temp_c : query.data?.data.current.temp_f) as number)}°
+                    <span className='text-[10rem]'>{temp ? 'C' : 'F'}</span>
                   </div>
                   <div className='flex justify-around w-full'>
                     <div className='flex items-center'>
