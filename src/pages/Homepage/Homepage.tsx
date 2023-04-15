@@ -47,7 +47,6 @@ export default function Homepage() {
   const backgroundImage = () => {
     const result: any = weatherBackground.filter((item) => item.name === query.data?.data.current.condition.text)
     const session: string = getSessionInDayByUrl(query.data?.data.current.condition.icon as string)
-    console.log('session', session)
     return result.length > 0 && result[0][session]
   }
 
